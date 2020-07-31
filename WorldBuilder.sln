@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30320.27
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldBuilder", "WorldBuilder\WorldBuilder.csproj", "{48796276-D01B-4ECD-B083-98C14A307BA5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{865A4352-4E12-48B7-8432-7901B38F3A42} = {865A4352-4E12-48B7-8432-7901B38F3A42}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldBuilder.Graphics", "WorldBuilder.Graphics\WorldBuilder.Graphics.csproj", "{865A4352-4E12-48B7-8432-7901B38F3A42}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48796276-D01B-4ECD-B083-98C14A307BA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48796276-D01B-4ECD-B083-98C14A307BA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48796276-D01B-4ECD-B083-98C14A307BA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48796276-D01B-4ECD-B083-98C14A307BA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{865A4352-4E12-48B7-8432-7901B38F3A42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{865A4352-4E12-48B7-8432-7901B38F3A42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{865A4352-4E12-48B7-8432-7901B38F3A42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{865A4352-4E12-48B7-8432-7901B38F3A42}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BE3C4A95-8337-4CE4-8AE7-97CFFCB16512}
+	EndGlobalSection
+EndGlobal
