@@ -8,8 +8,8 @@
   <ItemGroup>
     <Folder Include="Demographics\" />
     <Folder Include="Politics\" />
-    <Folder Include="Utility\Functional\" />
     <Folder Include="Simulation\" />
+    <Folder Include="Utility\Algorithms\" />
   </ItemGroup>
 
   <ItemGroup>

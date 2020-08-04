@@ -31,7 +31,7 @@ namespace WorldBuilder {
 
         static void RunMapTest() {
 
-            World world = new WorldGenerator().SetSize(800, 600).SetScale(1000).SetPointRange(40..70).Generate(4554);
+            World world = new WorldGenerator().SetSize(1200, 500).SetScale(1000).SetPointRange(300..470).SetContinentCount(7).Generate(4554);
             world.SaveMapToFile("Test.png");
 
         }
