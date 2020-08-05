@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using WorldBuilder.Graphics;
+using WorldBuilder.Graphics.Draw;
 using WorldBuilder.Utility.Functional;
 using WorldBuilder.Utility.Maths;
 
@@ -12,6 +14,7 @@ namespace WorldBuilder.Geography {
         Range m_pointRange;
         ushort m_width, m_height;
         double m_scale;
+        VoroniDiagram.DistanceMethod m_dstMethod;
 
         int m_continents = 1;
 
@@ -36,6 +39,11 @@ namespace WorldBuilder.Geography {
             return this;
         }
 
+        public WorldGenerator SetDistanceMethod(VoroniDiagram.DistanceMethod method) {
+            this.m_dstMethod = method;
+            return this;
+        }
+
         public World Generate(int seed) {
 
             Random randomizer = new Random(seed);
@@ -50,12 +58,12 @@ namespace WorldBuilder.Geography {
             }
 
             VoroniDiagram diagram = new VoroniDiagram(this.m_width, this.m_height);
-            diagram.GenerateVoroni(points, VoroniDiagram.DistanceMethod.Manhattan);
+            diagram.GenerateVoroni(points, this.m_dstMethod);
             diagram.SaveToFile("test_voroni.png");
 
             Console.WriteLine("-- Voroni generated --");
 
-            diagram.Borderise(true);
+            diagram.Borderise(false);
 
             Console.WriteLine("-- Voroni Borderized --");
 
@@ -65,9 +73,36 @@ namespace WorldBuilder.Geography {
             Console.WriteLine("-- Voroni Removing Border Regions --");
 
             diagram.RemoveRegions((a, b) => a.Bounding.MinX == 0 || a.Bounding.MinY == 0 || a.Bounding.MaxX == b.Width-1 || a.Bounding.MaxY == b.Height-1);
-            diagram.SaveToFile("test_voroni_no_borders.png");
+            diagram.SaveToFile("test_voroni_no_edge_regions.png");
 
             Console.WriteLine("-- Generating Continents --");
+
+            GenerateContinents(diagram, randomizer, pointCount);
+
+            Console.WriteLine("-- Converting to Grayscale --");
+
+            Render bwDiagram = diagram.Renderer.ToBlackWhite(0.01f);
+            bwDiagram.RenderToFile("test_world_a.png");
+
+            CrystalizeFilter crystalizeFlt = new CrystalizeFilter() { Generator = randomizer };
+            MedianNoiseFilter medianFlt = new MedianNoiseFilter() { NoiseSize = 5 };
+
+            Console.WriteLine("-- Applying filters --");
+
+            bwDiagram.ApplyFilter(medianFlt);
+            bwDiagram.ApplyFilter(crystalizeFlt);
+            bwDiagram.ApplyFilter(medianFlt);
+
+            Console.WriteLine();
+
+            bwDiagram.RenderToFile("test_world_b.png");
+
+            return result;
+
+        }
+
+        private void GenerateContinents(VoroniDiagram diagram, Random randomizer, int pointCount) {
+
 
             int offset = randomizer.Next(0, 50);
             int xCut = offset;
@@ -76,7 +111,7 @@ namespace WorldBuilder.Geography {
 
             for (int i = 0; i < this.m_continents; i++) {
 
-                int select = randomizer.Next(5, 8 + (int)((diagram.RegionCount * 0.675) / (this.m_continents)));
+                int select = randomizer.Next(5, 8 + (int)((diagram.RegionCount) / (this.m_continents) * 0.675));
                 int nullCounter = 0;
                 List<VoroniRegion> selected = new List<VoroniRegion>();
                 Stack<VoroniRegion> addOrder = new Stack<VoroniRegion>();
@@ -105,7 +140,9 @@ namespace WorldBuilder.Geography {
                         }
 
                         IEnumerable<(VoroniRegion, int)> p = neighbours
-                            .Select(x => (x, Math.Abs(x.Bounding.Centre.Item1 - vr0.Bounding.Centre.Item1) + Math.Abs(x.Bounding.Centre.Item2 - vr0.Bounding.Centre.Item2)))
+                            .Select(x => (x, (this.m_dstMethod == VoroniDiagram.DistanceMethod.Euclidean)?
+                            ((x.Bounding.Centre.Item1 - vr0.Bounding.Centre.Item1) *(x.Bounding.Centre.Item1 - vr0.Bounding.Centre.Item1) +(vr0.Bounding.Centre.Item2) *(vr0.Bounding.Centre.Item2))
+                            :Math.Abs(x.Bounding.Centre.Item1 - vr0.Bounding.Centre.Item1) + Math.Abs(x.Bounding.Centre.Item2 - vr0.Bounding.Centre.Item2)))
                             .Where(x => !m_continentRegions.Any(y => y.Value.Contains(x.x)) && !selected.Contains(x.x));
 
                         IEnumerable<VoroniRegion> n = ((randomizer.Next(0, 10) < 6) ? p.OrderBy(x => x.Item2) : p.OrderByDescending(x => x.Item2)).Select(x => x.Item1);
@@ -148,12 +185,8 @@ namespace WorldBuilder.Geography {
 
             }
 
-            Console.WriteLine();
-
-            diagram.RemoveRegions((a,b) => !m_continentRegions.Any(x => x.Value.Contains(a)));
+            diagram.RemoveRegions((a, b) => !m_continentRegions.Any(x => x.Value.Contains(a)));
             diagram.SaveToFile("test_voroni_with_continents.png");
-
-            return result;
 
         }
 

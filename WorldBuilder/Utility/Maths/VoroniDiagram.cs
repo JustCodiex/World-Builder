@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Drawing;
 using System.Linq;
-using System.Text;
 using WorldBuilder.Graphics;
 
 namespace WorldBuilder.Utility.Maths {
@@ -29,6 +27,8 @@ namespace WorldBuilder.Utility.Maths {
 
         public int RegionCount => this.m_regions.Count;
 
+        public Render Renderer => this.m_render;
+
         public VoroniDiagram(int width, int height) {
 
             this.m_width = width;
@@ -48,27 +48,22 @@ namespace WorldBuilder.Utility.Maths {
             }
 
             Random random = new Random(pointsImm.Length);
-            Dictionary<(int, int), (float, float, float)> colours = new Dictionary<(int, int), (float, float, float)>();
+            Dictionary<(int, int), (byte, byte, byte)> colours = new Dictionary<(int, int), (byte, byte, byte)>();
             bool isEuclidean = method == DistanceMethod.Euclidean;
 
             for (int i = 0; i < pointsImm.Length; i++) {
-                (float, float, float) colour = ((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                (byte, byte, byte) colour = ((byte)(255 *random.NextDouble()), (byte)(255 * random.NextDouble()), (byte)(255 * random.NextDouble()));
                 colours.Add(pointsImm[i], colour);
             }
 
-            for (int x = 0; x < this.m_width; x++) {
-                for (int y = 0; y < this.m_height; y++) {
+            for (uint x = 0; x < this.m_width; x++) {
+                for (uint y = 0; y < this.m_height; y++) {
 
                     double min = double.MaxValue;
                     int index = 0;
                     for (int i = 0; i < pointsImm.Length; i++) {
                         (int, int) p = pointsImm[i];
-                        double dis;
-                        if (isEuclidean) {
-                            dis = Math.Sqrt(Math.Pow(p.Item1 - x, 2) + Math.Pow(p.Item2 - y, 2));
-                        } else {
-                            dis = Math.Abs(p.Item1 - x) + Math.Abs(p.Item2 - y);
-                        }
+                        double dis = (isEuclidean) ? (p.Item1 - x) * (p.Item1 - x) + (p.Item2 - y) * (p.Item2 - y) : Math.Abs(p.Item1 - x) + Math.Abs(p.Item2 - y);
                         if (dis < min) {
                             min = dis;
                             index = i;
@@ -76,7 +71,7 @@ namespace WorldBuilder.Utility.Maths {
                     }
 
                     this.m_regionIndex[x, y] = index;
-                    this.m_render.SetPixel(x,y, colours[pointsImm[index]]);
+                    this.m_render.Raw.SetPixel(x, y, colours[pointsImm[index]].Item1, colours[pointsImm[index]].Item2, colours[pointsImm[index]].Item3);
 
                 }
             }
@@ -106,7 +101,7 @@ namespace WorldBuilder.Utility.Maths {
 
                     if (drawBorders) {
                         if (this.m_border[x, y] && x > 0 && y > 0 && x < this.m_width - 1 && y < this.m_height - 1) {
-                            this.m_render.SetPixel(x, y, (0.0f, 0.0f, 0.0f));
+                            this.m_render.Raw.SetPixel((uint)x, (uint)y, 0);
                         }
                     }
 
@@ -190,7 +185,7 @@ namespace WorldBuilder.Utility.Maths {
                 }
 
                 if (drawRegions) {
-                    corners.ForEach(x => this.m_render.SetPixel(x.Item1, x.Item2, (0.5f, 0.5f, 0.5f)));
+                    //corners.ForEach(x => this.m_render.SetPixel(x.Item1, x.Item2, (0.5f, 0.5f, 0.5f)));
                 }
 
                 this.m_regions[pair.Key] = new VoroniRegion() {
@@ -203,80 +198,19 @@ namespace WorldBuilder.Utility.Maths {
 
         }
 
-        public void SubDivide(Random random) {
-
-            for (int i = 0; i < this.m_regions.Count; i++) {
-
-                if (this.m_regions[i].Bounding.Height <= 7 || this.m_regions[i].Bounding.Width <= 7) {
-                    continue;
-                }
-
-                HashSet<(int, int)> points = new HashSet<(int, int)>();
-                int genCount = random.Next(3, 6);
-
-                while (points.Count < genCount) {
-
-                    int x = random.Next(this.m_regions[i].Bounding.MinX, this.m_regions[i].Bounding.MaxX);
-                    int y = random.Next(this.m_regions[i].Bounding.MinY, this.m_regions[i].Bounding.MaxY);
-
-                    if (this.m_regionIndex[x, y] != i) {
-                        continue;
-                    }
-
-                    bool any = false;
-
-                    for (int px = x - 4; px < x + 4; px++) {
-                        if (!any) {
-                            for (int py = y - 4; py < y + 4; py++) {
-                                if (px < 0 || py < 0 || px >= this.m_width || py >= this.m_height || this.m_border[px, py]) {
-                                    any = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (!any) {
-
-                        if (points.Add((x, y))) {
-
-                            this.m_render.SetPixel(x, y, (1.0f, 0.0f, 0.0f));
-
-                        }
-
-                    }
-
-                }
-
-                if (points.Count > 1) {
-
-                    VoroniDiagram subDiagram = new VoroniDiagram(this.m_regions[i].Bounding.Width, this.m_regions[i].Bounding.Height);
-                    subDiagram.GenerateVoroni(points, DistanceMethod.Euclidean);
-                    subDiagram.SaveToFile($"sub{i}.png");
-
-                }
-
-            }
-
-        }
-
         public void RemoveRegions(Func<VoroniRegion, VoroniDiagram, bool> predicate) {
             Stack<int> remove = new Stack<int>();
             foreach (var pair in this.m_regions) {
                 if (predicate(pair.Value, this)) {
                     int i = pair.Key;
-                    for (int x = this.m_regions[i].Bounding.MinX; x < this.m_regions[i].Bounding.MaxX; x++) {
-                        for (int y = this.m_regions[i].Bounding.MinY; y < this.m_regions[i].Bounding.MaxY; y++) {
-
+                    for (uint x = (uint)this.m_regions[i].Bounding.MinX; x <= this.m_regions[i].Bounding.MaxX; x++) {
+                        for (uint y = (uint)this.m_regions[i].Bounding.MinY; y <= this.m_regions[i].Bounding.MaxY; y++) {
                             if (this.m_regionIndex[x, y] == i) {
-                                this.m_render.SetPixel(x, y, (0.0f, 0.0f, 0.0f));
+                                this.m_render.Raw.SetPixel(x, y, 0);
                             }
-
                         }
                     }
-
                     remove.Push(pair.Key);
-
                 }
             }
             while(remove.Count > 0) {
