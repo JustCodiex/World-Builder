@@ -33,7 +33,7 @@ namespace WorldBuilder {
         static void RunMapTest() {
 
             World world = new WorldGenerator().SetSize(1000, 400).SetScale(1000)
-                .SetPointRange(320..480)
+                .SetPointRange(360..768)
                 .SetContinentCount(7)
                 .SetDistanceMethod(VoroniDiagram.DistanceMethod.Euclidean)
                 .Generate(4554);

@@ -44,8 +44,7 @@ namespace WorldBuilder.Graphics.Draw {
                     for (int ccx = cx - 3; ccx < cx + 3; ccx++) {
                         for (int ccy = cy - 3; ccy < cy + 3; ccy++) {
                             if (ccx >= 0 && ccy >= 0 && ccx < cellW && ccy < cellH) {
-                                int w = points[ccx, ccy].Item1;
-                                int h = points[ccx, ccy].Item2;
+                                (int w, int h) = points[ccx, ccy];
                                 int d = (w - x) * (w - x) + (h - y) * (h - y);
                                 if (d < maxD) {
                                     maxD = d;

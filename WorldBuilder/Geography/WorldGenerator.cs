@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+
 using WorldBuilder.Graphics;
 using WorldBuilder.Graphics.Draw;
-using WorldBuilder.Utility.Functional;
+using WorldBuilder.Utility.Algorithms;
 using WorldBuilder.Utility.Maths;
 
 namespace WorldBuilder.Geography {
@@ -72,12 +72,12 @@ namespace WorldBuilder.Geography {
             Console.WriteLine("-- Voroni Regions Captured --");
             Console.WriteLine("-- Voroni Removing Border Regions --");
 
-            diagram.RemoveRegions((a, b) => a.Bounding.MinX == 0 || a.Bounding.MinY == 0 || a.Bounding.MaxX == b.Width-1 || a.Bounding.MaxY == b.Height-1);
+            diagram.RemoveRegions((a, b) => a.Bounding.MinX <= 30 || a.Bounding.MinY <= 30 || a.Bounding.MaxX >= b.Width-30 || a.Bounding.MaxY >= b.Height-30);
             diagram.SaveToFile("test_voroni_no_edge_regions.png");
 
             Console.WriteLine("-- Generating Continents --");
 
-            GenerateContinents(diagram, randomizer, pointCount);
+            Dictionary<int, List<VoroniRegion>> contininents = GenerateContinents(diagram, randomizer, pointCount); // TODO: Save regions
 
             Console.WriteLine("-- Converting to Grayscale --");
 
@@ -93,25 +93,54 @@ namespace WorldBuilder.Geography {
             bwDiagram.ApplyFilter(crystalizeFlt);
             bwDiagram.ApplyFilter(medianFlt);
 
-            Console.WriteLine();
-
             bwDiagram.RenderToFile("test_world_b.png");
+
+            Console.WriteLine("-- Filters applied --");
+
+            // Create continental points
+            HashSet<(int, int)> continentalPoints = new HashSet<(int, int)>();
+            int counter = 0;
+            while (counter < pointCount) {
+                (int x, int y) = (randomizer.Next(0, this.m_width), randomizer.Next(0, this.m_height));
+                if (diagram.IsValidRegion(x, y)) {
+                    if (continentalPoints.Add((x, y))) {
+                        counter++;
+                    }
+                }
+            }
+
+            VoroniDiagram continentalDiagram = VoroniDiagram.FromRender(bwDiagram, continentalPoints, VoroniDiagram.DistanceMethod.Euclidean, (0.0f, 0.0f, 0.0f));
+            continentalDiagram.Borderise(false);
+            continentalDiagram.CaptureRegions(false);
+            continentalDiagram.RemoveRegions((a, b) => a.Bounding.MinX == 0 && a.Bounding.MinY == 0 && a.Bounding.MaxX == b.Width - 1 && a.Bounding.MaxY == b.Height - 1);
+            continentalDiagram.SaveToFile("continental.png");
+
+            Console.WriteLine("-- Generating height map --");
+
+            this.GenerateHeightmap(bwDiagram, this.MapContinents(contininents, diagram, continentalDiagram), continentalDiagram, randomizer);
+
+            Console.WriteLine("-- Genereating details map --");
+            this.GenerateDetails(bwDiagram);
+
+            Console.WriteLine("-- Finished generating world terrain --");
+            Console.WriteLine("-- Generating history --");
+
+            Console.WriteLine();
 
             return result;
 
         }
 
-        private void GenerateContinents(VoroniDiagram diagram, Random randomizer, int pointCount) {
-
+        private Dictionary<int, List<VoroniRegion>> GenerateContinents(VoroniDiagram diagram, Random randomizer, int pointCount) {
 
             int offset = randomizer.Next(0, 50);
             int xCut = offset;
 
-            Dictionary<int, List<VoroniRegion>> m_continentRegions = new Dictionary<int, List<VoroniRegion>>();
+            Dictionary<int, List<VoroniRegion>> continents = new Dictionary<int, List<VoroniRegion>>();
 
             for (int i = 0; i < this.m_continents; i++) {
 
-                int select = randomizer.Next(5, 8 + (int)((diagram.RegionCount) / (this.m_continents) * 0.675));
+                int select = randomizer.Next(5, 8 + (int)((diagram.RegionCount) / (this.m_continents) * 0.6));
                 int nullCounter = 0;
                 List<VoroniRegion> selected = new List<VoroniRegion>();
                 Stack<VoroniRegion> addOrder = new Stack<VoroniRegion>();
@@ -121,7 +150,7 @@ namespace WorldBuilder.Geography {
 
                     if (vr0 == null) {
                         vr0 = diagram.SelectRegion(randomizer.Next(0, pointCount));
-                        if (m_continentRegions.Any(x => x.Value.Contains(vr0))) {
+                        if (continents.Any(x => x.Value.Contains(vr0))) {
                             vr0 = null;
                             continue;
                         } else {
@@ -143,9 +172,9 @@ namespace WorldBuilder.Geography {
                             .Select(x => (x, (this.m_dstMethod == VoroniDiagram.DistanceMethod.Euclidean)?
                             ((x.Bounding.Centre.Item1 - vr0.Bounding.Centre.Item1) *(x.Bounding.Centre.Item1 - vr0.Bounding.Centre.Item1) +(vr0.Bounding.Centre.Item2) *(vr0.Bounding.Centre.Item2))
                             :Math.Abs(x.Bounding.Centre.Item1 - vr0.Bounding.Centre.Item1) + Math.Abs(x.Bounding.Centre.Item2 - vr0.Bounding.Centre.Item2)))
-                            .Where(x => !m_continentRegions.Any(y => y.Value.Contains(x.x)) && !selected.Contains(x.x));
+                            .Where(x => !continents.Any(y => y.Value.Contains(x.x)) && !selected.Contains(x.x));
 
-                        IEnumerable<VoroniRegion> n = ((randomizer.Next(0, 10) < 6) ? p.OrderBy(x => x.Item2) : p.OrderByDescending(x => x.Item2)).Select(x => x.Item1);
+                        IEnumerable<VoroniRegion> n = ((randomizer.Next(0, 11) <= 5) ? p.OrderBy(x => x.Item2) : p.OrderByDescending(x => x.Item2)).Select(x => x.Item1);
 
                         if (n.Count() > 0) {
 
@@ -181,12 +210,269 @@ namespace WorldBuilder.Geography {
 
                 }
 
-                m_continentRegions.Add(i, selected);
+                continents.Add(i, selected);
 
             }
 
-            diagram.RemoveRegions((a, b) => !m_continentRegions.Any(x => x.Value.Contains(a)));
+            diagram.RemoveRegions((a, b) => !continents.Any(x => x.Value.Contains(a)));
             diagram.SaveToFile("test_voroni_with_continents.png");
+
+            return continents;
+
+        }
+
+        private void GenerateHeightmap(Render currentRender, Dictionary<int, List<VoroniRegion>> continents, VoroniDiagram voroni, Random randomizer) {
+
+            Render heightmap = new Render((uint)currentRender.Raw.Width, (uint)currentRender.Raw.Height);
+            heightmap.Clear(0, 0, 0);
+
+            Render colourmap = new Render((uint)currentRender.Raw.Width, (uint)currentRender.Raw.Height);
+            colourmap.Clear(0, 0, 0);
+
+            foreach (var continent in continents) {
+
+                foreach (var region in continent.Value) {
+
+                    var neighbourRegions = voroni.SelectNeighbours(region);
+                    List<VoroniRegion> nonContinentalNeighbours = new List<VoroniRegion>();
+
+                    foreach (var neighbour in neighbourRegions) {
+                        if (!continent.Value.Contains(neighbour)) {
+                            nonContinentalNeighbours.Add(neighbour);
+                            break;
+                        }
+                    }
+
+                    bool isCoastalRegion = false;
+
+                    for (int x = region.Bounding.MinX - 1; x < region.Bounding.MaxX + 1 && !isCoastalRegion; x++) {
+                        for (int y = region.Bounding.MinY - 1; y < region.Bounding.MaxY + 1 && !isCoastalRegion; y++) {
+                            if (!voroni.IsValidRegion(x, y)) {
+                                isCoastalRegion = true;
+                            }
+                        }
+                    }
+
+                    bool isContinentalBorderRegion = nonContinentalNeighbours.Count > 0;
+                    bool isSouthernRegion = region.Bounding.Centre.Item2 >= currentRender.Raw.Height * (2.0/3.0);
+                    bool isEquatorialRegion = !isSouthernRegion && region.Bounding.Centre.Item2 >= currentRender.Raw.Height * (1.0 / 3.0);
+                    bool isNorthernRegion = !isSouthernRegion && !isEquatorialRegion;
+
+                    if (isContinentalBorderRegion) {
+                        if (isCoastalRegion) {
+                            if (isNorthernRegion) {
+                                if (randomizer.Next(0,10) <= 8) { 
+                                    GenerateForest(voroni, heightmap, colourmap, region, randomizer); 
+                                } else {
+                                    GenerateMountainous(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            } else if (isEquatorialRegion) {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateForest(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateMountainous(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            } else {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateForest(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateMountainous(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            }
+                        } else {
+                            if (isNorthernRegion) {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateForest(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateMountainous(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            } else if (isEquatorialRegion) {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateTropical(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateMountainous(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            } else {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateTropical(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateMountainous(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            }
+                        }
+                    } else {
+                        if (isCoastalRegion) {
+                            if (isNorthernRegion) {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateForest(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateFlatlands(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            } else if (isEquatorialRegion) {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateFlatlands(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateDesert(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            } else {
+                                if (randomizer.Next(0, 10) <= 8) {
+                                    GenerateFlatlands(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateTropical(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            }
+                        } else {
+                            if (isNorthernRegion) {
+                                if (randomizer.Next(0, 10) <= 5) {
+                                    GenerateForest(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateFlatlands(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            } else if (isEquatorialRegion) {
+                                GenerateDesert(voroni, heightmap, colourmap, region, randomizer);
+                            } else {
+                                if (randomizer.Next(0, 10) <= 5) {
+                                    GenerateTropical(voroni, heightmap, colourmap, region, randomizer);
+                                } else {
+                                    GenerateDesert(voroni, heightmap, colourmap, region, randomizer);
+                                }
+                            }
+                        }
+                    }
+
+                }
+
+            }
+
+            heightmap.RenderToFile("test_world_c.png");
+            colourmap.RenderToFile("test_world_d.png");
+
+        }
+
+        private Dictionary<int, List<VoroniRegion>> MapContinents(Dictionary<int, List<VoroniRegion>> source, VoroniDiagram diagram, VoroniDiagram continentalDiagram) {
+
+            Dictionary<int, List<VoroniRegion>> result = new Dictionary<int, List<VoroniRegion>>();
+            var oldregions = diagram.SelectRegion((a, b) => true);
+
+            var regions = continentalDiagram.SelectRegion((a, b) => true);
+
+            foreach (var pair in source) {
+                result.Add(pair.Key, new List<VoroniRegion>());
+            }
+
+            foreach (var reg in regions) {
+
+                List<VoroniRegion> boundMatches = new List<VoroniRegion>();
+
+                foreach (var reg2 in oldregions) {
+                    if (diagram.IsValidRegion(reg2.Bounding.Centre.Item1, reg2.Bounding.Centre.Item2) && reg2.Bounding.Expand(1.5f).Contains(reg.Bounding.Centre.Item1, reg.Bounding.Centre.Item2)) {
+                        boundMatches.Add(reg2);
+                    }
+                }
+
+                if (boundMatches.Count > 0) {
+
+                    VoroniRegion nearest = boundMatches.MinDist(double.MaxValue, reg,
+                        (a, b) => (Math.Pow(a.Bounding.Centre.Item1 - b.Bounding.Centre.Item1, 2)) + Math.Pow(a.Bounding.Centre.Item2 - b.Bounding.Centre.Item2, 2));
+
+                    foreach (var pair in source) {
+                        if (pair.Value.Contains(nearest)) {
+                            result[pair.Key].Add(reg);
+                            break;
+                        }
+                    }
+
+                }
+
+            }
+            return result;
+
+        }
+
+        private static (float r, float g, float b) TropicalTreeColour = (0.035f, 0.18f, 0.054f);
+        private static (float r, float g, float b) FlatlandsColour = (0.83f, 0.71f, 0.54f);
+        private static (float r, float g, float b) DesertColour = (0.125f, 0.54f, 0.1f);
+        private static (float r, float g, float b) ForestColour = (0.49f, 0.54f, 0.1f);
+        private static (float r, float g, float b) MountainColour = (0.97f, 0.97f, 0.97f);
+
+        private void GenerateFlatlands(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, Random random) {
+
+            for (int x = region.Bounding.MinX; x <= region.Bounding.MaxX; x++) {
+                for (int y = region.Bounding.MinY; y <= region.Bounding.MaxY; y++) {
+
+                    if (diagram.IsValidRegion(x, y) && diagram.SelectRegion(x, y) == region) {
+                        heightmap.SetPixel(x, y, (0.35f, 0.35f, 0.35f));
+                        colourmap.SetPixel(x, y, FlatlandsColour);
+                    }
+
+                }
+            }
+
+        }
+
+        private void GenerateDesert(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, Random random) {
+
+            for (int x = region.Bounding.MinX; x <= region.Bounding.MaxX; x++) {
+                for (int y = region.Bounding.MinY; y <= region.Bounding.MaxY; y++) {
+
+                    if (diagram.IsValidRegion(x, y) && diagram.SelectRegion(x, y) == region) {
+                        heightmap.SetPixel(x, y, (0.35f, 0.35f, 0.35f));
+                        colourmap.SetPixel(x, y, DesertColour);
+                    }
+
+                }
+            }
+
+        }
+
+        private void GenerateForest(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, Random random) {
+
+            for (int x = region.Bounding.MinX; x <= region.Bounding.MaxX; x++) {
+                for (int y = region.Bounding.MinY; y <= region.Bounding.MaxY; y++) {
+
+                    if (diagram.IsValidRegion(x, y) && diagram.SelectRegion(x, y) == region) {
+                        heightmap.SetPixel(x, y, (0.35f, 0.35f, 0.35f));
+                        colourmap.SetPixel(x, y, ForestColour);
+                    }
+
+                }
+            }
+
+        }
+
+        private void GenerateMountainous(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, Random random) {
+
+            for (int x = region.Bounding.MinX; x <= region.Bounding.MaxX; x++) {
+                for (int y = region.Bounding.MinY; y <= region.Bounding.MaxY; y++) {
+
+                    if (diagram.IsValidRegion(x, y) && diagram.SelectRegion(x, y) == region) {
+                        heightmap.SetPixel(x, y, (0.35f, 0.35f, 0.35f));
+                        colourmap.SetPixel(x, y, MountainColour);
+                    }
+
+                }
+            }
+
+        }
+
+        private void GenerateTropical(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, Random random) {
+
+            for (int x = region.Bounding.MinX; x <= region.Bounding.MaxX; x++) {
+                for (int y = region.Bounding.MinY; y <= region.Bounding.MaxY; y++) {
+
+                    if (diagram.IsValidRegion(x, y) && diagram.SelectRegion(x, y) == region) {
+                        heightmap.SetPixel(x, y, (0.35f, 0.35f, 0.35f));
+                        colourmap.SetPixel(x,y, TropicalTreeColour);
+                    }
+
+                }
+            }
+
+        }
+
+        private void GenerateDetails(Render currentRender) {
+
+            currentRender.RenderToFile("test_world_e.png");
 
         }
 

@@ -39,7 +39,10 @@ namespace WorldBuilder.Utility.Maths {
 
         }
 
-        public void GenerateVoroni(HashSet<(int, int)> points, DistanceMethod method) {
+        public void GenerateVoroni(HashSet<(int, int)> points, DistanceMethod method)
+            => this.GenerateVoroni(points, method, null);
+
+        public void GenerateVoroni(HashSet<(int, int)> points, DistanceMethod method, Predicate<(uint,uint)> legal) {
 
             ImmutableArray<(int, int)> pointsImm = points.ToImmutableArray();
             this.m_regions = new Dictionary<int, VoroniRegion>();
@@ -50,6 +53,7 @@ namespace WorldBuilder.Utility.Maths {
             Random random = new Random(pointsImm.Length);
             Dictionary<(int, int), (byte, byte, byte)> colours = new Dictionary<(int, int), (byte, byte, byte)>();
             bool isEuclidean = method == DistanceMethod.Euclidean;
+            bool hasLegalPredicate = legal != null;
 
             for (int i = 0; i < pointsImm.Length; i++) {
                 (byte, byte, byte) colour = ((byte)(255 *random.NextDouble()), (byte)(255 * random.NextDouble()), (byte)(255 * random.NextDouble()));
@@ -58,6 +62,11 @@ namespace WorldBuilder.Utility.Maths {
 
             for (uint x = 0; x < this.m_width; x++) {
                 for (uint y = 0; y < this.m_height; y++) {
+
+                    if (hasLegalPredicate && !legal((x, y))) {
+                        this.m_regionIndex[x, y] = -1;
+                        continue;
+                    }
 
                     double min = double.MaxValue;
                     int index = 0;
@@ -236,6 +245,9 @@ namespace WorldBuilder.Utility.Maths {
             }
         }
 
+        public VoroniRegion SelectRegion(int xPos, int yPos)
+            => this.SelectRegion(this.m_regionIndex[xPos, yPos]);
+
         public List<VoroniRegion> SelectNeighbours(VoroniRegion source) {
 
             HashSet<VoroniRegion> neighbours = new HashSet<VoroniRegion>();
@@ -257,8 +269,35 @@ namespace WorldBuilder.Utility.Maths {
 
         }
 
+        public void SetPixelRegionOwnership(int xPos, int yPos, VoroniRegion region) 
+            => this.m_regionIndex[xPos, yPos] = this.m_regions.First(x => x.Value == region).Key;
+
+        public void SetPixelRegionOwnershipt(int xPos, int yPos, int regIndex)
+            => this.m_regionIndex[xPos, yPos] = regIndex;
+
+        public bool IsValidRegion(int xPos, int yPos) {
+            if (xPos >= 0 && yPos >= 0 && xPos < this.m_width && yPos < this.m_height) {
+                return this.m_regions.ContainsKey(this.m_regionIndex[xPos, yPos]);
+            } else {
+                return false;
+            }
+        }
+
         public void SaveToFile(string file)
             => m_render.RenderToFile(file);
+
+        public static VoroniDiagram FromRender(Render render, HashSet<(int,int)> points, DistanceMethod method, (float,float,float)? ignoreColour = null) {
+
+            if (points == null) {
+                throw new ArgumentException();
+            }
+
+            VoroniDiagram diagram = new VoroniDiagram(render.Raw.Width, render.Raw.Height);
+            diagram.GenerateVoroni(points, method, x => render.GetPixel((int)x.Item1, (int)x.Item2) != ignoreColour);
+
+            return diagram;
+
+        }
 
     }
 

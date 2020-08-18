@@ -9,7 +9,6 @@
     <Folder Include="Demographics\" />
     <Folder Include="Politics\" />
     <Folder Include="Simulation\" />
-    <Folder Include="Utility\Algorithms\" />
   </ItemGroup>
 
   <ItemGroup>

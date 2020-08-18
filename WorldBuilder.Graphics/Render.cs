@@ -30,6 +30,11 @@ namespace WorldBuilder.Graphics {
         public void SetPixel(int x, int y, (float,float,float) rgb)
             => this.m_raw.SetPixel((uint)x, (uint)y, (byte)(255 * rgb.Item1), (byte)(255 * rgb.Item2), (byte)(255 * rgb.Item3));
 
+        public (float, float, float) GetPixel(int x, int y) {
+            var col = this.m_raw.GetPixelVector(x, y);
+            return (col[0], col[1], col[2]);
+        }
+
         public Render ToBlackWhite(float cut) {
 
             Render render = new Render((uint)this.m_bmp.Width, (uint)this.m_bmp.Height);
