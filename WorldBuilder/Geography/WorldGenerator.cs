@@ -100,7 +100,8 @@ namespace WorldBuilder.Geography {
             // Create continental points
             HashSet<(int, int)> continentalPoints = new HashSet<(int, int)>();
             int counter = 0;
-            while (counter < pointCount) {
+            int pCountNew = (int)(pointCount * 4.5);
+            while (counter < pCountNew) {
                 (int x, int y) = (randomizer.Next(0, this.m_width), randomizer.Next(0, this.m_height));
                 if (diagram.IsValidRegion(x, y)) {
                     if (continentalPoints.Add((x, y))) {
@@ -254,9 +255,17 @@ namespace WorldBuilder.Geography {
                     }
 
                     bool isContinentalBorderRegion = nonContinentalNeighbours.Count > 0;
-                    bool isSouthernRegion = region.Bounding.Centre.Item2 >= currentRender.Raw.Height * (2.0/3.0);
-                    bool isEquatorialRegion = !isSouthernRegion && region.Bounding.Centre.Item2 >= currentRender.Raw.Height * (1.0 / 3.0);
+                    bool isSouthernRegion = region.Bounding.Centre.Item2 > currentRender.Raw.Height * (3.5/4.0);
+                    bool isEquatorialRegion = !isSouthernRegion && region.Bounding.Centre.Item2 > currentRender.Raw.Height * (1.5 / 4.0);
                     bool isNorthernRegion = !isSouthernRegion && !isEquatorialRegion;
+
+                    /*if (isNorthernRegion) {
+                        DrawContinentalZone(voroni, heightmap, colourmap, region, (1.0f, 0.0f, 0.0f));
+                    } else if (isEquatorialRegion) {
+                        DrawContinentalZone(voroni, heightmap, colourmap, region, (0.0f, 1.0f, 0.0f));
+                    } else {
+                        DrawContinentalZone(voroni, heightmap, colourmap, region, (0.0f, 0.0f, 1.0f));
+                    }*/
 
                     if (isContinentalBorderRegion) {
                         if (isCoastalRegion) {
@@ -338,7 +347,7 @@ namespace WorldBuilder.Geography {
                                 }
                             }
                         }
-                    }
+                    }//*/
 
                 }
 
@@ -394,6 +403,22 @@ namespace WorldBuilder.Geography {
         private static (float r, float g, float b) DesertColour = (0.125f, 0.54f, 0.1f);
         private static (float r, float g, float b) ForestColour = (0.49f, 0.54f, 0.1f);
         private static (float r, float g, float b) MountainColour = (0.97f, 0.97f, 0.97f);
+        private static (float r, float g, float b) BeachColour = (0.125f, 0.54f, 0.1f);
+
+        private void DrawContinentalZone(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, (float,float,float) colour) {
+
+            for (int x = region.Bounding.MinX; x <= region.Bounding.MaxX; x++) {
+                for (int y = region.Bounding.MinY; y <= region.Bounding.MaxY; y++) {
+
+                    if (diagram.IsValidRegion(x, y) && diagram.SelectRegion(x, y) == region) {
+                        heightmap.SetPixel(x, y, (0.35f, 0.35f, 0.35f));
+                        colourmap.SetPixel(x, y, colour);
+                    }
+
+                }
+            }
+
+        }
 
         private void GenerateFlatlands(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, Random random) {
 
