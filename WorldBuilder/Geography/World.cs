@@ -26,7 +26,31 @@ namespace WorldBuilder.Geography {
 
         public void RecalculateWorldGraph() {
 
+            this.m_worldGraph = new Graph<WorldProvince, DistanceEdge>();
 
+            for (int i = 0; i < this.m_continents.Count; i++) {
+                for (int j = 0; j < this.m_continents[i].Regions.Count; j++) {
+                    for (int k = 0; k < this.m_continents[i].Regions[j].Provinces.Count; k++) {
+                        this.m_worldGraph.AddVertex(this.m_continents[i].Regions[j].Provinces[k]);
+                    }
+                }
+            }
+
+            for (int i = 0; i < this.m_worldGraph.Vertices.Count; i++) {
+
+                WorldProvince prov = this.m_worldGraph.Vertices[i];
+
+                foreach (WorldProvince n in prov.NeighbourProvinces) {
+
+                    DistanceEdge edge = new DistanceEdge {
+                        Distance = (int)Math.Sqrt(Math.Pow(prov.XPos - n.XPos, 2) + Math.Pow(prov.YPos - n.YPos, 2))
+                    };
+
+                    this.m_worldGraph.AddEdge(edge, prov, n);
+
+                }
+
+            }
 
         }
 

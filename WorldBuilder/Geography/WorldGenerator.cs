@@ -6,6 +6,7 @@ using WorldBuilder.Graphics;
 using WorldBuilder.Graphics.Draw;
 using WorldBuilder.History;
 using WorldBuilder.Utility.Algorithms;
+using WorldBuilder.Utility.Functional;
 using WorldBuilder.Utility.Maths;
 
 namespace WorldBuilder.Geography {
@@ -137,7 +138,7 @@ namespace WorldBuilder.Geography {
 
                 Console.WriteLine("-- Converting terrain into world data");
 
-                this.ConvertToSimulationData(continentVoroniRegions, heightmap, colourmap, out List<WorldContinent> wContinents);
+                this.ConvertToSimulationData(continentVoroniRegions, continentalDiagram, heightmap, colourmap, out List<WorldContinent> wContinents, randomizer);
                 result.Continents.AddRange(wContinents);
                 result.RecalculateWorldGraph();
 
@@ -150,6 +151,9 @@ namespace WorldBuilder.Geography {
             }
 
             Console.WriteLine();
+
+            // Force the GC to clean up
+            GC.Collect();
 
             return result;
 
@@ -524,7 +528,7 @@ namespace WorldBuilder.Geography {
 
         }
 
-        private void ConvertToSimulationData(Dictionary<int, List<VoroniRegion>> vorodiDiagrams, Render heightmap, Render colourmap, out List<WorldContinent> continents) {
+        private void ConvertToSimulationData(Dictionary<int, List<VoroniRegion>> vorodiDiagrams, VoroniDiagram diagram, Render heightmap, Render colourmap, out List<WorldContinent> continents, Random random) {
 
             continents = new List<WorldContinent>();
             List<WorldRegion> regions = new List<WorldRegion>();
@@ -533,7 +537,98 @@ namespace WorldBuilder.Geography {
             foreach (var continent in vorodiDiagrams) {
                 if (continent.Value.Count > 0) {
 
+                    var wContinent = new WorldContinent();
+                    var continentProvinces = new Dictionary<WorldProvince, VoroniRegion>();
+                    var continentRegions = new List<WorldRegion>();
 
+                    foreach (var province in continent.Value) {
+
+                        WorldProvince wProvince = new WorldProvince() {
+                            XPos = province.Bounding.Centre.Item1,
+                            YPos = province.Bounding.Centre.Item2,
+                        };
+
+                        continentProvinces.Add(wProvince, province);
+
+                    }
+
+                    foreach (var pair in continentProvinces) {
+                        var neighbours = diagram.SelectNeighbours(pair.Value);
+                        for (int i = 0; i < neighbours.Count; i++) {
+                            if (neighbours[i] != null) {
+                                WorldProvince p = continentProvinces.FirstOrDefault(x => x.Value == neighbours[i]).Key;
+                                if (p != null) {
+                                    pair.Key.NeighbourProvinces.Add(p);
+                                }
+                            }
+                        }
+                    }
+
+                    int regionMaxCount = continentProvinces.Count / random.Next(4, 8);
+                    int regionMaxSize = (continentProvinces.Count / regionMaxCount) + 1;
+                    var provincePool = continentProvinces.Select(x => x.Key).ToList();
+
+                    while (continentRegions.Count < regionMaxCount && provincePool.Count > 0) {
+
+                        WorldProvince province = provincePool.Random(random);
+                        WorldRegion reg = new WorldRegion();
+
+                        if (province.NeighbourProvinces.Count > 0) {
+                            reg.Provinces.Add(province);
+                            int picked = 1;
+                            int attempts = 0;
+                            int thisRegionMaxSize = regionMaxSize + random.Next(-1, 1);
+                            while (picked < thisRegionMaxSize && attempts < regionMaxSize * 4) {
+                                WorldProvince neighbour = province.NeighbourProvinces.Random(random);
+                                if (provincePool.Contains(neighbour)) {
+                                    provincePool.Remove(neighbour);
+                                    picked++;
+                                    reg.Provinces.Add(neighbour);
+                                    if (random.NextDouble() <= 0.45) {
+                                        province = neighbour;
+                                    }
+                                } // else - find some other province in region and use that
+                                attempts++;
+                            }
+                        } else { // island region-ish
+                            reg.Provinces.Add(province);
+                        }
+
+                        provincePool.Remove(province);
+                        continentRegions.Add(reg);
+
+                    }
+
+                    if (continentRegions.Count < regionMaxCount) {
+                        // pickup the remaining
+                    } else if (provincePool.Count > 0) {
+                        while (provincePool.Count > 0) {
+                            WorldProvince province = provincePool[0];
+                            if (province.NeighbourProvinces.Count > 0) {
+                                foreach (var neighbour in province.NeighbourProvinces) {
+                                    WorldRegion reg = continentRegions.FirstOrDefault(x => x.Provinces.Contains(neighbour));
+                                    if (reg != null) {
+                                        reg.Provinces.Add(province);
+                                        break;
+                                    }
+                                }
+                                if (provincePool.Count > 0 && provincePool[0] == province) {
+                                    WorldRegion reg = new WorldRegion();
+                                    reg.Provinces.Add(province);
+                                    continentRegions.Add(reg);
+                                }
+                            } else {
+                                WorldRegion reg = new WorldRegion();
+                                reg.Provinces.Add(province);
+                                continentRegions.Add(reg);
+                            }
+                            provincePool.RemoveAt(0);
+                        }
+                    }
+
+                    wContinent.Regions.AddRange(continentRegions);
+
+                    continents.Add(wContinent);
 
                 }
             }

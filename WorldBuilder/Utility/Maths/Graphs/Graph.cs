@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using WorldBuilder.Graphics;
 
 namespace WorldBuilder.Utility.Maths.Graphs {
@@ -10,9 +8,9 @@ namespace WorldBuilder.Utility.Maths.Graphs {
         where TEdge : IGraphEdge {
 
         private struct _Edge {
-            TEdge EdgeType;
-            TVertex VA;
-            TVertex VB;
+            public TEdge EdgeType;
+            public TVertex VA;
+            public TVertex VB;
             public _Edge(TEdge e, TVertex a, TVertex b) {
                 this.EdgeType = e;
                 this.VA = a;
@@ -22,6 +20,8 @@ namespace WorldBuilder.Utility.Maths.Graphs {
 
         List<TVertex> m_vertices;
         List<_Edge> m_edges;
+
+        public List<TVertex> Vertices => this.m_vertices;
 
         public Graph() {
             this.m_vertices = new List<TVertex>();
@@ -39,14 +39,17 @@ namespace WorldBuilder.Utility.Maths.Graphs {
 
         public void SaveToFile(string filepath, uint w, uint h) {
 
-            Render render = new Render(w, h);
+            Render render = new Render(w*2, h*2);
+            render.Clear(1.0f, 1.0f, 1.0f);
+
+            (float, float, float) rgb = (0, 0, 0);
 
             for (int i = 0; i < m_vertices.Count; i++) {
-                render.SetPixel(m_vertices[i].XPos, m_vertices[i].YPos, (0, 0, 0));
+                render.SetPixel(m_vertices[i].XPos, m_vertices[i].YPos, rgb);
             }
 
             for (int i = 0; i < m_edges.Count; i++) {
-
+                render.DrawLine(m_edges[i].VA.XPos, m_edges[i].VA.YPos, m_edges[i].VB.XPos, m_edges[i].VB.YPos, rgb);
             }
 
             render.RenderToFile(filepath);

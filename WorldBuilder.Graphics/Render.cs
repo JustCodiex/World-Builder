@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Text;
+
 using WorldBuilder.Graphics.Draw;
+using WorldBuilder.Graphics.Math;
 
 namespace WorldBuilder.Graphics {
     
@@ -33,6 +33,24 @@ namespace WorldBuilder.Graphics {
         public (float, float, float) GetPixel(int x, int y) {
             var col = this.m_raw.GetPixelVector(x, y);
             return (col[0], col[1], col[2]);
+        }
+
+        public void DrawLine(int x1, int y1, int x2, int y2, (float,float,float)rgb) {
+
+            Vector<float> p1 = new Vector<float>(x1, y1);
+            Vector<float> p2 = new Vector<float>(x2, y2);
+
+            Vector<float> dir = (p2 - p1).Normalize();
+            float dst = p1.DistanceTo(p2);
+            float t = 0.0f;
+            float stepsize = 1.01f / dst;
+
+            while (t < dst) {
+                Vector<float> p = p1 + (dir * t);
+                this.SetPixel((int)p[0], (int)p[1], rgb);
+                t += stepsize;
+            }
+
         }
 
         public Render ToBlackWhite(float cut) {

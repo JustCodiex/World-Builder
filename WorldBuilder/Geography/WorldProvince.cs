@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using WorldBuilder.Utility.Maths.Graphs;
 
 namespace WorldBuilder.Geography {
@@ -10,7 +9,13 @@ namespace WorldBuilder.Geography {
         public int XPos { get; set; }
         
         public int YPos { get; set; }
+
+        public List<WorldProvince> NeighbourProvinces { get; set; }
     
+        public WorldProvince() {
+            this.NeighbourProvinces = new List<WorldProvince>();
+        }
+
     }
 
 }
