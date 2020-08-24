@@ -4,6 +4,7 @@ using System.Linq;
 
 using WorldBuilder.Graphics;
 using WorldBuilder.Graphics.Draw;
+using WorldBuilder.History;
 using WorldBuilder.Utility.Algorithms;
 using WorldBuilder.Utility.Maths;
 
@@ -17,6 +18,12 @@ namespace WorldBuilder.Geography {
         VoroniDiagram.DistanceMethod m_dstMethod;
 
         int m_continents = 1;
+
+        public bool GenerateHistory { get; set; } = true;
+
+        public int FirstTribalYear { get; set; } = -10000;
+
+        public int StartYear { get; set; } = 1700;
 
         public WorldGenerator SetSize(ushort w, ushort h) {
             this.m_width = w;
@@ -118,13 +125,29 @@ namespace WorldBuilder.Geography {
 
             Console.WriteLine("-- Generating height map --");
 
-            this.GenerateHeightmap(bwDiagram, this.MapContinents(contininents, diagram, continentalDiagram), continentalDiagram, randomizer);
+            var continentVoroniRegions = this.MapContinents(contininents, diagram, continentalDiagram);
+            this.GenerateHeightmap(bwDiagram, continentVoroniRegions, continentalDiagram, randomizer, out Render heightmap, out Render colourmap);
 
             Console.WriteLine("-- Genereating details map --");
             this.GenerateDetails(bwDiagram);
 
             Console.WriteLine("-- Finished generating world terrain --");
-            Console.WriteLine("-- Generating history --");
+
+            if (GenerateHistory) {
+
+                Console.WriteLine("-- Converting terrain into world data");
+
+                this.ConvertToSimulationData(continentVoroniRegions, heightmap, colourmap, out List<WorldContinent> wContinents);
+                result.Continents.AddRange(wContinents);
+                result.RecalculateWorldGraph();
+
+                Console.WriteLine("-- Generating history --");
+
+                HistoryGenerator hisGen = new HistoryGenerator(randomizer);
+
+
+
+            }
 
             Console.WriteLine();
 
@@ -222,12 +245,12 @@ namespace WorldBuilder.Geography {
 
         }
 
-        private void GenerateHeightmap(Render currentRender, Dictionary<int, List<VoroniRegion>> continents, VoroniDiagram voroni, Random randomizer) {
+        private void GenerateHeightmap(Render currentRender, Dictionary<int, List<VoroniRegion>> continents, VoroniDiagram voroni, Random randomizer, out Render heightmap, out Render colourmap) {
 
-            Render heightmap = new Render((uint)currentRender.Raw.Width, (uint)currentRender.Raw.Height);
+            heightmap = new Render((uint)currentRender.Raw.Width, (uint)currentRender.Raw.Height);
             heightmap.Clear(0, 0, 0);
 
-            Render colourmap = new Render((uint)currentRender.Raw.Width, (uint)currentRender.Raw.Height);
+            colourmap = new Render((uint)currentRender.Raw.Width, (uint)currentRender.Raw.Height);
             colourmap.Clear(0, 0, 0);
 
             foreach (var continent in continents) {
@@ -403,7 +426,7 @@ namespace WorldBuilder.Geography {
         private static (float r, float g, float b) DesertColour = (0.125f, 0.54f, 0.1f);
         private static (float r, float g, float b) ForestColour = (0.49f, 0.54f, 0.1f);
         private static (float r, float g, float b) MountainColour = (0.97f, 0.97f, 0.97f);
-        private static (float r, float g, float b) BeachColour = (0.125f, 0.54f, 0.1f);
+        //private static (float r, float g, float b) BeachColour = (0.125f, 0.54f, 0.1f);
 
         private void DrawContinentalZone(VoroniDiagram diagram, Render heightmap, Render colourmap, VoroniRegion region, (float,float,float) colour) {
 
@@ -498,6 +521,22 @@ namespace WorldBuilder.Geography {
         private void GenerateDetails(Render currentRender) {
 
             currentRender.RenderToFile("test_world_e.png");
+
+        }
+
+        private void ConvertToSimulationData(Dictionary<int, List<VoroniRegion>> vorodiDiagrams, Render heightmap, Render colourmap, out List<WorldContinent> continents) {
+
+            continents = new List<WorldContinent>();
+            List<WorldRegion> regions = new List<WorldRegion>();
+            List<WorldProvince> provinces = new List<WorldProvince>();
+
+            foreach (var continent in vorodiDiagrams) {
+                if (continent.Value.Count > 0) {
+
+
+
+                }
+            }
 
         }
 

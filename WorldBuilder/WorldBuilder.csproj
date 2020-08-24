@@ -7,8 +7,9 @@
 
   <ItemGroup>
     <Folder Include="Demographics\" />
-    <Folder Include="Politics\" />
+    <Folder Include="Linguistics\" />
     <Folder Include="Simulation\" />
+    <Folder Include="Utility\Maths\Statistics\" />
   </ItemGroup>
 
   <ItemGroup>
