@@ -22,9 +22,9 @@ namespace WorldBuilder.Geography {
 
         public bool GenerateHistory { get; set; } = true;
 
-        public int FirstTribalYear { get; set; } = -10000;
+        public int StartYear { get; set; } = -10000;
 
-        public int StartYear { get; set; } = 1700;
+        public int SimStartYear { get; set; } = 1700;
 
         public WorldGenerator SetSize(ushort w, ushort h) {
             this.m_width = w;
@@ -146,7 +146,9 @@ namespace WorldBuilder.Geography {
 
                 HistoryGenerator hisGen = new HistoryGenerator(randomizer);
 
+                hisGen.GenerateHistory(result, StartYear, SimStartYear);
 
+                result.History.SaveToFile("history.txt");
 
             }
 

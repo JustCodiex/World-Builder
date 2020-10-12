@@ -7,6 +7,8 @@ namespace WorldBuilder.Geography {
     
         public List<WorldRegion> Regions { get; set; }
 
+        public string Name { get; set; }
+
         public WorldContinent() {
             this.Regions = new List<WorldRegion>();
         }

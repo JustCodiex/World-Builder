@@ -10,6 +10,8 @@ namespace WorldBuilder.Geography {
         
         public int YPos { get; set; }
 
+        public string Name { get; set; }
+
         public List<WorldProvince> NeighbourProvinces { get; set; }
     
         public WorldProvince() {

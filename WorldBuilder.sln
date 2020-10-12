@@ -3,12 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30320.27
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldBuilder", "WorldBuilder\WorldBuilder.csproj", "{48796276-D01B-4ECD-B083-98C14A307BA5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorldBuilder", "WorldBuilder\WorldBuilder.csproj", "{48796276-D01B-4ECD-B083-98C14A307BA5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{865A4352-4E12-48B7-8432-7901B38F3A42} = {865A4352-4E12-48B7-8432-7901B38F3A42}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldBuilder.Graphics", "WorldBuilder.Graphics\WorldBuilder.Graphics.csproj", "{865A4352-4E12-48B7-8432-7901B38F3A42}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorldBuilder.Graphics", "WorldBuilder.Graphics\WorldBuilder.Graphics.csproj", "{865A4352-4E12-48B7-8432-7901B38F3A42}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{27AB7C14-4270-4399-B2DA-DACC6ED95D4A}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

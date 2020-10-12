@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using WorldBuilder.Graphics;
 using WorldBuilder.History;
+using WorldBuilder.Utility.Functional;
 using WorldBuilder.Utility.Maths.Graphs;
 
 namespace WorldBuilder.Geography {
@@ -15,6 +16,8 @@ namespace WorldBuilder.Geography {
         Graph<WorldProvince, DistanceEdge> m_worldGraph;
 
         public List<WorldContinent> Continents => this.m_continents;
+
+        public TimeLine History { get => this.m_history; set => this.m_history = value; }
 
         public World(uint width, uint height, double worldScale) {
             this.m_width = width;
@@ -66,6 +69,10 @@ namespace WorldBuilder.Geography {
             this.m_worldGraph.SaveToFile(filename.Replace(".png", "_graph.png"), this.m_width, this.m_height);
 
         }
+
+        public WorldProvince GetRandomWorldProvince() => this.GetRandomWorldProvince(new Random());
+
+        public WorldProvince GetRandomWorldProvince(Random random) => this.m_continents.Random(random).Regions.Random(random).Provinces.Random(random);
 
     }
 

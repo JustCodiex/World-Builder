@@ -20,7 +20,7 @@ namespace WorldBuilder.History {
             this._day = day;
         }
 
-        public override string ToString() => $"{this._year}{((this.BeforeCommonEra)?" BC":"")}, {Database.Month.Names[this._month]} {this._day.ToFormattedString()}";
+        public override string ToString() => $"{this._year}{((this.BeforeCommonEra)?" BCE":"")}, {Database.Month.Names[this._month]} {this._day.ToFormattedString()}";
 
     }
 
